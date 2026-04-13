@@ -232,7 +232,7 @@ GENERIC_PLACEHOLDERS = {
     "example", "test", "fake", "dummy", "placeholder", "insert_",
     "replace_", "todo", "fill_in", "put_", "<your", "change_me",
     "my_", "sample_", "demo_", "abc123", "123456", "qwerty",
-    "aaaa", "bbbb", "cccc", "000000",
+    "000000",
 }
 
 
