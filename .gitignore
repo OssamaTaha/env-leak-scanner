@@ -1,2 +1,5 @@
 *.json
 __pycache__/
+
+# ⚠️ NEVER COMMIT — contains SMTP credentials
+config.py
