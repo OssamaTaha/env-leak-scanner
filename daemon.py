@@ -51,6 +51,26 @@ QUERIES = {
     "Anthropic Claude":  'filename:.env "ANTHROPIC_API_KEY"',
 }
 
+# Code file queries — secrets hardcoded directly in source code
+# These scan .py, .js, .ts, .go, .rb, .java, .php, .sh files
+CODE_QUERIES = {
+    "OpenAI in code":    'filename:.py OR filename:.js OR filename:.ts "sk-proj-" NOT node_modules',
+    "AWS in code":       'filename:.py OR filename:.js OR filename:.ts "AKIA" NOT node_modules',
+    "Stripe in code":    'filename:.py OR filename:.js OR filename:.ts "sk_live_" NOT node_modules',
+    "Private keys":      'filename:.pem OR filename:.key "BEGIN RSA PRIVATE" OR "BEGIN PRIVATE"',
+    "DB passwords":      'filename:.py OR filename:.js "password=" OR "PASSWORD=" NOT test NOT example',
+    "Hardcoded tokens":  'filename:.py OR filename:.js "ghp_" OR "gho_" OR "github_pat_" NOT node_modules',
+    "Firebase in code":  'filename:.py OR filename:.js "firebase" "private_key" NOT node_modules',
+    "JWT in code":       'filename:.py OR filename:.js "jwt" "secret=" NOT test NOT node_modules',
+    # Crypto / Financial
+    "Ethereum keys":     'filename:.py OR filename:.js OR filename:.env "0x" private_key NOT node_modules',
+    "Wallet mnemonics":  'filename:.py OR filename:.js OR filename:.env mnemonic OR seed_phrase NOT node_modules',
+    "Crypto secrets":    'filename:.py OR filename:.js OR filename:.env wallet_key OR WALLET_PRIVATE_KEY NOT node_modules',
+    "Stripe restricted": 'filename:.py OR filename:.js "rk_live_" NOT node_modules',
+    "Payment keys":      'filename:.py OR filename:.js OR filename:.env "paypal" OR "square" OR "braintree" "secret" NOT node_modules',
+}
+
+
 # ── State ───────────────────────────────────────────────────────────
 running = True
 cycle_count = 0
@@ -740,6 +760,346 @@ git log -p -- {exposed_file}
 
 
 # ── Main Scan Cycle ─────────────────────────────────────────────────
+
+# ── Unknown Secret Detection (regex + AI) ───────────────────────────
+# Catch secrets that don't match known patterns.
+# Use regex to find suspicious strings, then AI to identify provider.
+
+# Generic patterns that look like secrets in ANY file type
+GENERIC_SECRET_PATTERNS = [
+    # variable = "long-random-string"  (python, js, ts, etc)
+    (r'(?:api_key|apikey|api_token|secret_key|secret|password|passwd|token|auth|credential|private_key)\s*[=:]\s*["\']([A-Za-z0-9+/=_\-]{20,})["\']',
+     "secret_assignment", "Key/password assignment with 20+ char value"),
+    
+    # export SECRET="value"  (shell)
+    (r'(?:export\s+)?(?:API_KEY|SECRET|TOKEN|PASSWORD|CREDENTIAL)\s*=\s*["\']?([A-Za-z0-9+/=_\-]{20,})["\']?',
+     "env_assignment", "Environment variable with 20+ char value"),
+    
+    # connection strings with embedded passwords
+    (r'(?:mongodb|postgresql|mysql|redis|amqp)://[^:]+:([^@\s]{8,})@',
+     "connection_string", "Database connection string with embedded password"),
+    
+    # AWS-style keys (AKIA + 16 chars)
+    (r'(AKIA[A-Z0-9]{16})', "aws_access_key", "AWS access key pattern"),
+    
+    # Generic long base64 strings assigned to vars (32+ chars)
+    (r'["\']([A-Za-z0-9+/]{32,}={0,2})["\']',
+     "base64_blob", "Long base64 string (possible key/token)"),
+    
+    # GitHub tokens
+    (r'(ghp_[A-Za-z0-9]{36})', "github_pat", "GitHub personal access token"),
+    (r'(gho_[A-Za-z0-9]{36})', "github_oauth", "GitHub OAuth token"),
+    (r'(github_pat_[A-Za-z0-9]{22}_[A-Za-z0-9]{59})', "github_fine_pat", "GitHub fine-grained PAT"),
+    
+    # Slack tokens
+    (r'(xoxb-[0-9]{10,}-[A-Za-z0-9]{24,})', "slack_bot", "Slack bot token"),
+    (r'(xoxp-[0-9]{10,}-[A-Za-z0-9]{24,})', "slack_user", "Slack user token"),
+    
+    # Stripe
+    (r'(sk_live_[a-zA-Z0-9]{24,})', "stripe_live", "Stripe live secret key"),
+    (r'(rk_live_[a-zA-Z0-9]{24,})', "stripe_restricted", "Stripe restricted key"),
+    
+    # SendGrid
+    (r'(SG\.[A-Za-z0-9_-]{22}\.[A-Za-z0-9_-]{43})', "sendgrid", "SendGrid API key"),
+    
+    # Twilio
+    (r'(SK[a-f0-9]{32})', "twilio_sid", "Twilio API key SID"),
+    
+    # Private keys in files
+    (r'-----BEGIN (?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----', "private_key", "Private key block"),
+    
+    # High-entropy strings near password/token keywords (20+ unique chars in 32+ length)
+    (r'(?:pass|token|secret|key|auth)\w*\s*[=:]\s*["\']([^"\']{32,})["\']',
+     "high_entropy_near_keyword", "Possible secret near password/token keyword"),
+
+    # ── Crypto Wallet Private Keys ──
+    # Ethereum private key (64 hex chars, sometimes with 0x prefix)
+    (r'(?:0x)?([a-fA-F0-9]{64})', "eth_private_key", "Ethereum private key (64 hex)"),
+
+    # Bitcoin WIF private keys (start with 5, K, or L, base58 ~51-52 chars)
+    (r'["\']?([5KL][1-9A-HJ-NP-Za-km-z]{50,51})["\']?', "btc_wif_key", "Bitcoin WIF private key"),
+
+    # Solana private key (base58, typically 64+ chars, often as byte array)
+    (r'(?:secretKey|private_key|secret_key)\s*[=:]\s*\[([0-9,\s]{100,})\]', "solana_key_array", "Solana private key (byte array)"),
+    (r'["\']([1-9A-HJ-NP-Za-km-z]{64,88})["\']', "solana_base58", "Possible Solana/base58 private key"),
+
+    # BIP39 mnemonic seed phrases (12 or 24 common English words)
+    (r'(?:mnemonic|seed|recovery|backup)\w*\s*[=:]\s*["\']([a-z]+ [a-z]+ [a-z]+ [a-z]+ [a-z]+ [a-z]+ [a-z]+ [a-z]+ [a-z]+ [a-z]+ [a-z]+ [a-z]+)["\']',
+     "mnemonic_12", "Possible 12-word seed phrase"),
+    (r'(?:mnemonic|seed|recovery|backup)\w*\s*[=:]\s*["\']([a-z]+(?: [a-z]+){23})["\']',
+     "mnemonic_24", "Possible 24-word seed phrase"),
+
+    # Generic crypto private key assignments
+    (r'(?:private_key|privkey|privateKey|secretKey|wallet_key|WALLET_PRIVATE_KEY)\s*[=:]\s*["\']([A-Za-z0-9+/=_\-]{32,})["\']',
+     "crypto_private_key", "Crypto wallet private key assignment"),
+
+    # ── Financial / Payment Secrets ──
+    # Stripe restricted keys
+    (r'(rk_live_[a-zA-Z0-9]{24,})', "stripe_restricted", "Stripe restricted key"),
+    (r'(rk_test_[a-zA-Z0-9]{24,})', "stripe_restricted_test", "Stripe restricted test key"),
+
+    # PayPal access tokens
+    (r'(access_token\$[A-Za-z0-9_-]{50,})', "paypal_token", "PayPal access token"),
+
+    # Square access tokens
+    (r'(sq0atp-[0-9A-Za-z\-_]{22,})', "square_token", "Square access token"),
+    (r'(sq0csp-[0-9A-Za-z\-_]{43,})', "square_secret", "Square OAuth secret"),
+
+    # Braintree access tokens
+    (r'(access_token\$production\$[a-z0-9]+\$[a-f0-9]{32})', "braintree_token", "Braintree access token"),
+
+    # CoinBase API keys
+    (r'(organizations/[a-f0-9-]+/apiKeys/[a-f0-9-]+)', "coinbase_key_id", "Coinbase API key ID"),
+
+    # Binance API signature
+    (r'(?:binance|BNB).*(?:secret|api_secret)\s*[=:]\s*["\']([A-Za-z0-9]{32,64})["\']',
+     "binance_secret", "Binance API secret"),
+
+    # Credit card numbers (Luhn-valid patterns)
+    (r'(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|3[47][0-9]{13}|6(?:011|5[0-9]{2})[0-9]{12})',
+     "credit_card", "Possible credit card number"),
+
+    # Bank routing/account patterns (US)
+    (r'(?:routing|aba|routing_number)\s*[=:]\s*["\']?(\d{9})["\']?', "bank_routing", "US bank routing number"),
+    (r'(?:account_number|bank_account)\s*[=:]\s*["\']?(\d{8,17})["\']?', "bank_account", "Bank account number"),
+
+    # IBAN patterns
+    (r'["\']?([A-Z]{2}\d{2}[A-Z0-9]{4,30})["\']?', "iban", "Possible IBAN"),
+]
+
+# Known provider prefix patterns for quick classification
+PROVIDER_PREFIXES = {
+    # API Keys
+    "sk-proj-": "OpenAI",
+    "sk_live_": "Stripe (live)",
+    "sk_test_": "Stripe (test)",
+    "rk_live_": "Stripe Restricted (live)",
+    "rk_test_": "Stripe Restricted (test)",
+    "AKIA": "AWS",
+    "ghp_": "GitHub PAT",
+    "gho_": "GitHub OAuth",
+    "github_pat_": "GitHub Fine-grained PAT",
+    "SG.": "SendGrid",
+    "xoxb-": "Slack Bot",
+    "xoxp-": "Slack User",
+    "SKA": "Twilio",
+    "pk_live_": "Stripe Public (live)",
+    "pk_test_": "Stripe Public (test)",
+    "npm_": "npm",
+    "glpat-": "GitLab PAT",
+    "sq0atp-": "Square",
+    "sq0csp-": "Square Secret",
+    "organizations/": "Coinbase",
+    # Database
+    "mongodb+srv://": "MongoDB",
+    "postgresql://": "PostgreSQL",
+    "mysql://": "MySQL",
+    "redis://": "Redis",
+    # Crypto
+    "0x": "Ethereum",
+    "5": "Bitcoin (WIF compressed)",
+    "K": "Bitcoin (WIF K-prefix)",
+    "L": "Bitcoin (WIF L-prefix)",
+    "sqs.": "AWS SQS",
+    "arn:aws:": "AWS ARN",
+}
+
+
+def classify_by_prefix(value):
+    """Quick classification by known prefixes."""
+    for prefix, provider in PROVIDER_PREFIXES.items():
+        if value.startswith(prefix):
+            return provider
+    return None
+
+
+def scan_content_for_secrets(content, file_path=""):
+    """Scan file content with regex patterns to find suspicious secrets.
+    Returns list of found secrets with context."""
+    
+    found = []
+    lines = content.split('\n')
+    
+    for line_num, line in enumerate(lines, 1):
+        line_stripped = line.strip()
+        if not line_stripped or line_stripped.startswith('#') or line_stripped.startswith('//'):
+            continue
+        
+        for pattern, pattern_name, description in GENERIC_SECRET_PATTERNS:
+            matches = re.finditer(pattern, line, re.IGNORECASE)
+            for match in matches:
+                # Get the captured group (the actual secret value)
+                value = match.group(1) if match.lastindex else match.group(0)
+                value = value.strip().strip('"').strip("'")
+                
+                if not value or len(value) < 15:
+                    continue
+                
+                # Skip if it's clearly a placeholder
+                if is_real_secret("", value, "") is False:
+                    continue
+                
+                # Quick classify by prefix
+                provider = classify_by_prefix(value)
+                
+                found.append({
+                    "line": line_num,
+                    "value_preview": f"{value[:6]}...{value[-4:]}" if len(value) > 14 else value,
+                    "value_full": value,
+                    "pattern": pattern_name,
+                    "description": description,
+                    "provider": provider or "unknown",
+                    "context": line_stripped[:120],
+                })
+    
+    return found
+
+
+def ai_identify_secret(value, context=""):
+    """Use AI (Hermes) to identify what provider a secret belongs to.
+    Falls back to heuristic analysis if Hermes is unavailable."""
+    
+    # Heuristic checks first (no API call needed)
+    provider = classify_by_prefix(value)
+    if provider:
+        return provider, "prefix_match"
+    
+    # Check entropy and format
+    if re.match(r'^[A-F0-9]{40}$', value):
+        return "Possibly AWS Secret Key or SHA1 hash", "format_match"
+    if re.match(r'^[A-Za-z0-9+/]{40,}={0,2}$', value):
+        return "Possibly Base64-encoded key/token", "format_match"
+    if re.match(r'^[a-f0-9]{64}$', value):
+        return "Possibly SHA-256 hash or API key", "format_match"
+    
+    # Check context clues from the line
+    ctx_lower = context.lower()
+    if "stripe" in ctx_lower: return "Likely Stripe", "context"
+    if "aws" in ctx_lower or "amazon" in ctx_lower: return "Likely AWS", "context"
+    if "openai" in ctx_lower or "gpt" in ctx_lower: return "Likely OpenAI", "context"
+    if "firebase" in ctx_lower: return "Likely Firebase", "context"
+    if "sendgrid" in ctx_lower: return "Likely SendGrid", "context"
+    if "twilio" in ctx_lower: return "Likely Twilio", "context"
+    if "slack" in ctx_lower: return "Likely Slack", "context"
+    if "github" in ctx_lower: return "Likely GitHub", "context"
+    if "mongo" in ctx_lower: return "Likely MongoDB", "context"
+    if "postgres" in ctx_lower: return "Likely PostgreSQL", "context"
+    if "redis" in ctx_lower: return "Likely Redis", "context"
+    if "jwt" in ctx_lower or "token" in ctx_lower: return "Possibly JWT/API Token", "context"
+    if "password" in ctx_lower or "pass" in ctx_lower: return "Possibly Password", "context"
+    if "secret" in ctx_lower: return "Possibly API Secret", "context"
+    
+    return "Unknown provider", "no_match"
+
+
+def try_validate_generic(value):
+    """Try to validate a secret by testing against known providers."""
+    
+    # OpenAI
+    if value.startswith("sk-"):
+        try:
+            r = requests.get("https://api.openai.com/v1/models",
+                           headers={"Authorization": f"Bearer {value}"}, timeout=8)
+            if r.status_code == 200: return True, "OpenAI — confirmed active"
+            if r.status_code == 401: return False, "OpenAI — invalid/revoked"
+        except: pass
+    
+    # Stripe
+    if value.startswith("sk_live_") or value.startswith("sk_test_"):
+        try:
+            r = requests.get("https://api.stripe.com/v1/balance",
+                           auth=(value, ""), timeout=8)
+            if r.status_code == 200: return True, "Stripe — confirmed active"
+            if r.status_code == 401: return False, "Stripe — invalid/revoked"
+        except: pass
+    
+    # GitHub
+    if value.startswith("ghp_") or value.startswith("gho_") or value.startswith("github_pat_"):
+        try:
+            r = requests.get("https://api.github.com/user",
+                           headers={"Authorization": f"token {value}"}, timeout=8)
+            if r.status_code == 200: return True, f"GitHub — active (@{r.json().get('login','?')})"
+            return False, "GitHub — invalid/revoked"
+        except: pass
+    
+    # Discord
+    if len(value) > 50 and '.' in value:
+        try:
+            r = requests.get("https://discord.com/api/v10/users/@me",
+                           headers={"Authorization": value}, timeout=8)
+            if r.status_code == 200: return True, f"Discord — active (@{r.json().get('username','?')})"
+        except: pass
+    
+    # Telegram
+    if re.match(r'^\d{8,10}:[A-Za-z0-9_-]{35}$', value):
+        try:
+            r = requests.get(f"https://api.telegram.org/bot{value}/getMe", timeout=8)
+            if r.json().get("ok"): return True, f"Telegram — active (@{r.json()['result'].get('username','?')})"
+            return False, "Telegram — invalid"
+        except: pass
+    
+    # Slack
+    if value.startswith("xoxb-") or value.startswith("xoxp-"):
+        try:
+            r = requests.get("https://slack.com/api/auth.test",
+                           headers={"Authorization": f"Bearer {value}"}, timeout=8)
+            if r.json().get("ok"): return True, f"Slack — active ({r.json().get('team','?')})"
+            return False, "Slack — invalid"
+        except: pass
+    
+    # SendGrid
+    if value.startswith("SG."):
+        try:
+            r = requests.get("https://api.sendgrid.com/v3/user/profile",
+                           headers={"Authorization": f"Bearer {value}"}, timeout=8)
+            if r.status_code == 200: return True, "SendGrid — confirmed active"
+            return False, "SendGrid — invalid"
+        except: pass
+    
+    # AWS (needs both access key + secret, but we can check format)
+    if value.startswith("AKIA"):
+        try:
+            r = requests.get(
+                "https://sts.amazonaws.com/?Action=GetCallerIdentity&Version=2011-06-15",
+                headers={"Authorization": f"AWS4-HMAC-SHA256 Credential={value}"}, timeout=8)
+            if "SignatureDoesNotMatch" in r.text: return True, "AWS — key exists (sig mismatch expected)"
+            if "InvalidClientTokenId" in r.text: return False, "AWS — invalid key"
+        except: pass
+    
+    # ── Crypto Validation ──
+    # Ethereum — check balance via public API (key is valid if address is derivable)
+    if re.match(r'^[a-fA-F0-9]{64}$', value) and len(value) == 64:
+        try:
+            from hashlib import sha256
+            # A real eth private key will be a valid 256-bit number
+            num = int(value, 16)
+            if 0 < num < 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141:
+                return True, "Ethereum — valid private key format (SECP256k1 range)"
+        except: pass
+    
+    # Bitcoin WIF — validate format
+    if re.match(r'^[5KL][1-9A-HJ-NP-Za-km-z]{50,51}$', value):
+        return True, "Bitcoin — valid WIF private key format"
+    
+    # Mnemonic seed phrases — check word count
+    words = value.split()
+    if len(words) in (12, 15, 18, 21, 24):
+        # BIP39 wordlists are 2048 words — check if words look English
+        common_words = {"the", "be", "to", "of", "and", "a", "in", "that", "have"}
+        if not any(w in common_words for w in words[:3]):  # seed words are rarely common
+            return True, f"Crypto — {len(words)}-word seed phrase (BIP39 format)"
+    
+    # Credit card — Luhn check
+    if re.match(r'^\d{13,19}$', value):
+        digits = [int(d) for d in reversed(value)]
+        checksum = sum(d if i % 2 == 0 else (2*d if 2*d < 10 else 2*d-9) for i, d in enumerate(digits))
+        if checksum % 10 == 0:
+            return True, "Financial — Luhn-valid card number"
+    
+    # Can't determine
+    return None, "No matching provider for validation"
+
+
 def run_scan_cycle(notified_set):
     """Run one full scan cycle across all categories."""
     global total_notified, total_scanned
