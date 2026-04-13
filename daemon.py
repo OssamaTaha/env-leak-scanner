@@ -272,27 +272,66 @@ def is_real_secret(key, value, secret_type):
     if len(set(value)) < 4 and len(value) < 30:
         return False
     
+    # ── Reject code artifacts that aren't secrets ──
+    # Regex patterns
+    if value.startswith('/') or value.startswith('[') or value.startswith('^') or value.startswith('('):
+        return False
+    if '/gi' in value or '/g' in value[-3:] or '\\b' in value:
+        return False
+    # Regex-looking strings (contains [^\S, \\b, etc)
+    if re.search(r'\[\\?\^|\\[swdb]|\\.|\\\(|\(\?:|\?\||\{\\d|\*\?|\+\?', value):
+        return False
+    # Contains too many regex special chars
+    regex_chars = sum(1 for c in value if c in r'\[](){}?*+|^$')
+    if regex_chars > 3:
+        return False
+    
+    # Code snippets
+    if any(x in value for x in ['function ', 'var ', 'const ', 'let ', 'import ', 'def ', 'class ',
+                                  'return ', 'if ', 'for ', 'while ', 'try:', 'except',
+                                  'console.', 'print(', 'self.', 'this.']):
+        return False
+    
+    # CLI/argument patterns
+    if any(x in value for x in ['@click', '--', 'argparse', 'sys.argv', 'argv[']):
+        return False
+    
+    # HTML/CSS/JS artifacts
+    if any(x in value for x in ['<script', '</script>', '<div', 'function(', '=>', '});',
+                                  '.getElementById', '.querySelector', 'addEventListener',
+                                  'innerHTML', 'textContent', 'style.']):
+        return False
+    
+    # URLs and paths (not secrets)
+    if value.startswith('http://') or value.startswith('https://') or value.startswith('/'):
+        return False
+    
+    # File extensions suggest it's a filename, not a secret
+    if any(value.endswith(ext) for ext in ['.js', '.py', '.html', '.css', '.json', '.yml', 
+                                            '.yaml', '.md', '.txt', '.csv', '.png', '.jpg']):
+        return False
+    
     # Check type-specific patterns
     if secret_type in SECRET_PATTERNS:
         patterns = SECRET_PATTERNS[secret_type]
-        
-        # Check test patterns — if matches, it's a test key
         for test_pat in patterns.get("test_patterns", []):
             if re.search(test_pat, value, re.IGNORECASE):
                 return False
-        
-        # Check if it meets minimum length
         if len(value) < patterns.get("min_length", 15):
             return False
     
     # For API keys: should have decent entropy (mix of chars)
     if "KEY" in key.upper() or "TOKEN" in key.upper() or "SECRET" in key.upper():
-        # Count unique characters ratio
         unique_ratio = len(set(value)) / len(value) if value else 0
-        if unique_ratio < 0.3:  # Low entropy = likely placeholder
+        if unique_ratio < 0.3:
             return False
     
-    # If it passed all checks, it's probably real
+    # Final check: must contain a mix of letters and numbers (real keys do)
+    has_letter = any(c.isalpha() for c in value)
+    has_digit = any(c.isdigit() for c in value)
+    if not (has_letter and has_digit):
+        return False
+    
     return True
 
 
@@ -1259,6 +1298,7 @@ def run_scan_cycle(notified_set):
         
         cycle_exposures += total_count
         total_scanned += 1
+        category_counts[category] = total_count
         
         # Rotate pages: if we got results, advance page for next cycle
         if real_items:
@@ -1304,7 +1344,7 @@ def notify_findings(findings, notified_set):
                 skipped_placeholder += 1
                 continue
             
-            log(f"  ✅ Values look real: {', '.join(real_secrets[:3])}", "ok")
+            log(f"  ✅ Values look real: {', '.join([s.get('preview', '?') for s in real_secrets[:3]])}", "ok")
             
             # Step 2: LIVE TEST the keys — are they still active?
             log(f"  🔍 Testing keys live...", "scan")
@@ -1640,7 +1680,7 @@ def main():
         cycle_count += 1
         log(f"═══ SCAN CYCLE #{cycle_count} ═══", "scan")
         
-        findings, new_repos, exposures = run_scan_cycle(notified_set)
+        findings, new_repos, exposures, category_counts = run_scan_cycle(notified_set)
         
         if not running:
             break
@@ -1649,19 +1689,11 @@ def main():
         print_cycle_summary(findings, new_repos, exposures, notified_count, skipped_count)
         
         # Update README with live data
-        categories_seen = {}
-        for cat, items in findings.items():
-            categories_seen[cat] = len(items) * 100  # rough estimate from this cycle
-        # Merge with total exposures for a better picture
-        for cat in ALL_QUERIES:
-            if cat not in categories_seen:
-                categories_seen[cat] = 0
-        
         generate_readme(
             cycle_count, exposures, new_repos,
             total_notified, skipped_count,
-            total_scanned, 0,  # tested/active tracked in findings
-            categories_seen
+            total_scanned, 0,
+            category_counts  # Real counts from search results
         )
         
         if config.SCAN_INTERVAL > 0 and running:
