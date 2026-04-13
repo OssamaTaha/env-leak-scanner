@@ -1320,7 +1320,12 @@ def notify_findings(findings, notified_set):
                 active_keys = [r for r in test_results if r.get("active")]
                 log(f"  🔴 {len(active_keys)} ACTIVE key(s) found — notifying!", "err")
             else:
-                log(f"  🟡 Could not test keys — notifying based on format check", "warn")
+                # any_active is None — can't test, DON'T notify
+                log(f"  🟡 Could not test keys — skipping (no email sent)", "warn")
+                notified_set.add(repo)
+                save_notified(notified_set)
+                skipped_placeholder += 1
+                continue
             
             log(f"Notifying {repo} ({category}) via {method}...", "scan")
             
