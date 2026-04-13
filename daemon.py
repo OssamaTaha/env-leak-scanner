@@ -33,42 +33,46 @@ DIM    = "\033[2m"
 RESET  = "\033[0m"
 
 # ── Search Queries ──────────────────────────────────────────────────
-QUERIES = {
-    "OpenAI Keys":       'filename:.env "sk-proj-"',
-    "AWS Access Keys":   'filename:.env "AKIA"',
-    "Stripe Live Keys":  'filename:.env "sk_live_"',
-    "Database URLs":     'filename:.env "postgresql://" password',
-    "MongoDB URIs":      'filename:.env "mongodb+srv://"',
-    "Discord Tokens":    'filename:.env "DISCORD_TOKEN" NOT skeleton NOT example',
-    "GitHub Tokens":     'filename:.env "GITHUB_TOKEN" NOT example',
-    "Firebase Keys":     'filename:.env "FIREBASE_PRIVATE_KEY"',
-    "Twilio Auth":       'filename:.env "TWILIO_AUTH_TOKEN"',
-    "SendGrid Keys":     'filename:.env "SENDGRID_API_KEY"',
-    "Telegram Bots":     'filename:.env "TELEGRAM_BOT_TOKEN"',
-    "JWT Secrets":       'filename:.env "JWT_SECRET" NOT example',
-    "SMTP Passwords":    'filename:.env "SMTP_PASSWORD"',
-    "Gemini/Google AI":  'filename:.env "GOOGLE_API_KEY" NOT example',
-    "Anthropic Claude":  'filename:.env "ANTHROPIC_API_KEY"',
+# All queries — env files + code files + crypto + financial
+# We rotate through these and paginate to scan wider
+
+ALL_QUERIES = {
+    # ── .env files ──
+    "OpenAI (.env)":           'filename:.env "sk-proj-"',
+    "AWS (.env)":              'filename:.env "AKIA"',
+    "Stripe (.env)":           'filename:.env "sk_live_"',
+    "DB URLs (.env)":          'filename:.env "postgresql://" password',
+    "MongoDB (.env)":          'filename:.env "mongodb+srv://"',
+    "Discord (.env)":          'filename:.env "DISCORD_TOKEN" NOT skeleton',
+    "GitHub (.env)":           'filename:.env "GITHUB_TOKEN" NOT example',
+    "Firebase (.env)":         'filename:.env "FIREBASE_PRIVATE_KEY"',
+    "Twilio (.env)":           'filename:.env "TWILIO_AUTH_TOKEN"',
+    "SendGrid (.env)":         'filename:.env "SENDGRID_API_KEY"',
+    "Telegram (.env)":         'filename:.env "TELEGRAM_BOT_TOKEN"',
+    "JWT (.env)":              'filename:.env "JWT_SECRET" NOT example',
+    "SMTP (.env)":             'filename:.env "SMTP_PASSWORD"',
+    "Gemini (.env)":           'filename:.env "GOOGLE_API_KEY" NOT example',
+    "Anthropic (.env)":        'filename:.env "ANTHROPIC_API_KEY"',
+    # ── Code files ──
+    "OpenAI (code)":           'filename:.py OR filename:.js "sk-proj-" NOT node_modules',
+    "AWS (code)":              'filename:.py OR filename:.js "AKIA" NOT node_modules',
+    "Stripe (code)":           'filename:.py OR filename:.js "sk_live_" NOT node_modules',
+    "Private keys (code)":     'filename:.pem OR filename:.key "PRIVATE KEY"',
+    "DB passwords (code)":     'filename:.py OR filename:.js "password=" NOT test',
+    "GitHub tokens (code)":    'filename:.py OR filename:.js "ghp_" NOT node_modules',
+    "Firebase (code)":         'filename:.py OR filename:.js "firebase" "private_key"',
+    "JWT (code)":              'filename:.py OR filename:.js "jwt" "secret=" NOT test',
+    # ── Crypto / Financial ──
+    "Ethereum keys":           'filename:.env OR filename:.py "0x" private_key',
+    "Wallet mnemonics":        'filename:.env OR filename:.py mnemonic OR seed_phrase',
+    "Crypto secrets":          'filename:.env OR filename:.py wallet_key OR WALLET_PRIVATE_KEY',
+    "Stripe restricted":       'filename:.py "rk_live_"',
+    "Payment providers":       'filename:.env "paypal" OR "square" OR "braintree" "secret"',
+    "Credit cards":            'filename:.env OR filename:.py "card_number" OR "cc_number"',
 }
 
-# Code file queries — secrets hardcoded directly in source code
-# These scan .py, .js, .ts, .go, .rb, .java, .php, .sh files
-CODE_QUERIES = {
-    "OpenAI in code":    'filename:.py OR filename:.js OR filename:.ts "sk-proj-" NOT node_modules',
-    "AWS in code":       'filename:.py OR filename:.js OR filename:.ts "AKIA" NOT node_modules',
-    "Stripe in code":    'filename:.py OR filename:.js OR filename:.ts "sk_live_" NOT node_modules',
-    "Private keys":      'filename:.pem OR filename:.key "BEGIN RSA PRIVATE" OR "BEGIN PRIVATE"',
-    "DB passwords":      'filename:.py OR filename:.js "password=" OR "PASSWORD=" NOT test NOT example',
-    "Hardcoded tokens":  'filename:.py OR filename:.js "ghp_" OR "gho_" OR "github_pat_" NOT node_modules',
-    "Firebase in code":  'filename:.py OR filename:.js "firebase" "private_key" NOT node_modules',
-    "JWT in code":       'filename:.py OR filename:.js "jwt" "secret=" NOT test NOT node_modules',
-    # Crypto / Financial
-    "Ethereum keys":     'filename:.py OR filename:.js OR filename:.env "0x" private_key NOT node_modules',
-    "Wallet mnemonics":  'filename:.py OR filename:.js OR filename:.env mnemonic OR seed_phrase NOT node_modules',
-    "Crypto secrets":    'filename:.py OR filename:.js OR filename:.env wallet_key OR WALLET_PRIVATE_KEY NOT node_modules',
-    "Stripe restricted": 'filename:.py OR filename:.js "rk_live_" NOT node_modules',
-    "Payment keys":      'filename:.py OR filename:.js OR filename:.env "paypal" OR "square" OR "braintree" "secret" NOT node_modules',
-}
+# Track which page we're on for each query (for pagination across cycles)
+QUERY_PAGE_STATE = {q: 1 for q in ALL_QUERIES}
 
 
 # ── State ───────────────────────────────────────────────────────────
@@ -128,18 +132,19 @@ def wait_for_rate_limit():
 
 
 # ── GitHub Search ───────────────────────────────────────────────────
-def search_github(query):
+def search_github(query, page=1):
+    """Search GitHub code via gh CLI with rate limit handling and pagination."""
     wait_for_rate_limit()
     try:
         r = subprocess.run(
             ["gh", "api", "search/code", "-X", "GET",
-             "-f", f"q={query}", "-f", "per_page=15"],
+             "-f", f"q={query}", "-f", "per_page=10", "-f", f"page={page}"],
             capture_output=True, text=True, timeout=30
         )
         if r.returncode != 0:
             if "rate limit" in r.stderr.lower():
                 time.sleep(65)
-                return search_github(query)
+                return search_github(query, page)
             return None
         return json.loads(r.stdout)
     except Exception as e:
@@ -1101,19 +1106,28 @@ def try_validate_generic(value):
 
 
 def run_scan_cycle(notified_set):
-    """Run one full scan cycle across all categories."""
+    """Run one full scan cycle across all categories with pagination."""
     global total_notified, total_scanned
     
     cycle_findings = defaultdict(list)
     cycle_new_repos = 0
     cycle_exposures = 0
+    queries_this_cycle = min(len(ALL_QUERIES), 25)  # max 25 queries per cycle (30/min limit - buffer)
     
-    for i, (category, query) in enumerate(QUERIES.items()):
+    # Rotate which queries we run each cycle to cover more ground
+    all_keys = list(ALL_QUERIES.keys())
+    start_idx = (cycle_count - 1) * queries_this_cycle % len(all_keys)
+    query_slice = (all_keys[start_idx:] + all_keys[:start_idx])[:queries_this_cycle]
+    
+    for i, category in enumerate(query_slice):
         if not running:
             break
         
-        log(f"[{i+1}/{len(QUERIES)}] Scanning {category}...", "scan")
-        result = search_github(query)
+        query = ALL_QUERIES[category]
+        page = QUERY_PAGE_STATE.get(category, 1)
+        
+        log(f"[{i+1}/{queries_this_cycle}] {category} (page {page})...", "scan")
+        result = search_github(query, page)
         
         if result is None:
             log(f"  Failed: {category}", "err")
@@ -1132,6 +1146,11 @@ def run_scan_cycle(notified_set):
         
         cycle_exposures += total_count
         total_scanned += 1
+        
+        # Rotate pages: if we got results, advance page for next cycle
+        if real_items:
+            max_page = min(10, (total_count // 10) + 1)  # GitHub caps at ~100 results (10 pages)
+            QUERY_PAGE_STATE[category] = (page % max_page) + 1
         
         icon = "🔴" if total_count > 10000 else "🟡" if total_count > 1000 else "🟢"
         log(f"  {icon} {total_count:,} total | {new_count} new repos", "info")
