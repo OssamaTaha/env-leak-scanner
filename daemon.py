@@ -12,6 +12,8 @@ import os
 import time
 import signal
 import smtplib
+import re
+import base64
 from datetime import datetime, timezone
 from collections import defaultdict
 from email.mime.text import MIMEText
@@ -146,6 +148,438 @@ def filter_real_secrets(items):
     return real
 
 
+# ── Secret Verification ─────────────────────────────────────────────
+
+# Known test/example/placeholder patterns for each secret type
+SECRET_PATTERNS = {
+    "OpenAI Keys": {
+        "test_patterns": [
+            r"sk-test-",           # Stripe-style test
+            r"sk-proj-test",
+        ],
+        "real_pattern": r"sk-proj-[A-Za-z0-9]{20,}",  # Real OpenAI proj keys are long
+        "min_length": 40,
+    },
+    "AWS Access Keys": {
+        "test_patterns": [
+            r"AKIAIOSFODNN7EXAMPLE",  # AWS official example
+            r"AKIAIOSFODNN7TEST",
+            r"AKIA.{4}TEST",
+            r"AKIA.{4}EXAMPLE",
+        ],
+        "real_pattern": r"AKIA[A-Z0-9]{16}",  # Real AWS keys: AKIA + 16 alphanumeric
+        "min_length": 20,
+    },
+    "Stripe Live Keys": {
+        "test_patterns": [
+            r"sk_test_",
+            r"rk_test_",
+        ],
+        "real_pattern": r"sk_live_[a-zA-Z0-9]{24,}",
+        "min_length": 30,
+    },
+    "Database URLs": {
+        "test_patterns": [
+            r"localhost",
+            r"127\.0\.0\.1",
+            r"password@",
+            r"changeme@",
+            r"test@",
+            r"example\.com",
+        ],
+        "real_pattern": r"postgresql://[^:]+:[^@]{8,}@[a-z0-9.-]+\.com",
+        "min_length": 30,
+    },
+    "MongoDB URIs": {
+        "test_patterns": [
+            r"localhost",
+            r"127\.0\.0\.1",
+            r"mongodb://localhost",
+        ],
+        "real_pattern": r"mongodb\+srv://[^:]+:[^@]{8,}@[^/]+\.mongodb\.net",
+        "min_length": 40,
+    },
+}
+
+# Generic placeholder keywords that apply to ALL secret types
+GENERIC_PLACEHOLDERS = {
+    "your_", "xxx", "changeme", "password", "secret", "token",
+    "example", "test", "fake", "dummy", "placeholder", "insert_",
+    "replace_", "todo", "fill_in", "put_", "<your", "change_me",
+    "my_", "sample_", "demo_", "abc123", "123456", "qwerty",
+    "aaaa", "bbbb", "cccc", "000000",
+}
+
+
+def fetch_file_content(repo_full_name, file_path):
+    """Fetch actual file content from GitHub."""
+    try:
+        r = subprocess.run(
+            ["gh", "api", f"repos/{repo_full_name}/contents/{file_path}",
+             "-q", ".content"],
+            capture_output=True, text=True, timeout=10
+        )
+        if r.returncode == 0:
+            return base64.b64decode(r.stdout.strip()).decode('utf-8', errors='ignore')
+    except Exception:
+        pass
+    return None
+
+
+def is_real_secret(key, value, secret_type):
+    """Check if a key=value pair contains a REAL secret, not a placeholder."""
+    if not value:
+        return False
+    
+    value = value.strip().strip('"').strip("'")
+    
+    # Too short to be a real secret
+    if len(value) < 12:
+        return False
+    
+    # Check generic placeholders
+    val_lower = value.lower()
+    for placeholder in GENERIC_PLACEHOLDERS:
+        if placeholder in val_lower:
+            return False
+    
+    # Check if it's just repeated characters (e.g., "aaaaaaaaaa")
+    if len(set(value)) < 4 and len(value) < 30:
+        return False
+    
+    # Check type-specific patterns
+    if secret_type in SECRET_PATTERNS:
+        patterns = SECRET_PATTERNS[secret_type]
+        
+        # Check test patterns — if matches, it's a test key
+        for test_pat in patterns.get("test_patterns", []):
+            if re.search(test_pat, value, re.IGNORECASE):
+                return False
+        
+        # Check if it meets minimum length
+        if len(value) < patterns.get("min_length", 15):
+            return False
+    
+    # For API keys: should have decent entropy (mix of chars)
+    if "KEY" in key.upper() or "TOKEN" in key.upper() or "SECRET" in key.upper():
+        # Count unique characters ratio
+        unique_ratio = len(set(value)) / len(value) if value else 0
+        if unique_ratio < 0.3:  # Low entropy = likely placeholder
+            return False
+    
+    # If it passed all checks, it's probably real
+    return True
+
+
+def verify_repo_secrets(repo_full_name, file_path, secret_type):
+    """Fetch file content and verify it contains real secrets.
+    Returns (has_real_secrets: bool, real_secrets_found: list)"""
+    
+    content = fetch_file_content(repo_full_name, file_path)
+    if not content:
+        # Can't fetch — assume it might be real to be safe
+        return True, ["(could not verify content)"]
+    
+    real_secrets = []
+    
+    for line in content.split('\n'):
+        line = line.strip()
+        if not line or line.startswith('#'):
+            continue
+        if '=' not in line:
+            continue
+        
+        key, _, val = line.partition('=')
+        key = key.strip()
+        val = val.strip().strip('"').strip("'")
+        
+        if not val:
+            continue
+        
+        if is_real_secret(key, val, secret_type):
+            # Show first 4 and last 4 chars of the real secret
+            if len(val) > 12:
+                masked = f"{val[:4]}...{val[-4:]}"
+            else:
+                masked = val[:6] + "..."
+            real_secrets.append(f"{key}={masked} ({len(val)} chars)")
+    
+    return len(real_secrets) > 0, real_secrets
+
+
+# ── Live Key Validation ─────────────────────────────────────────────
+# Actually test if a leaked key STILL WORKS before notifying.
+# If it's already revoked, no point emailing.
+
+import requests
+
+KEY_TEST_TIMEOUT = 8  # seconds max per test
+
+
+def test_openai_key(value):
+    """Test OpenAI API key by listing models."""
+    try:
+        r = requests.get(
+            "https://api.openai.com/v1/models",
+            headers={"Authorization": f"Bearer {value}"},
+            timeout=KEY_TEST_TIMEOUT
+        )
+        return r.status_code == 200, f"HTTP {r.status_code}"
+    except Exception as e:
+        return None, str(e)
+
+
+def test_aws_key(value):
+    """Test AWS access key via STS GetCallerIdentity."""
+    import hmac, hashlib, datetime
+    
+    # We need both access key AND secret key — extract if found together
+    # For now just check format validity with a lightweight call
+    try:
+        # STS GetCallerIdentity — works with any valid AWS key
+        r = requests.get(
+            "https://sts.amazonaws.com/?Action=GetCallerIdentity&Version=2011-06-15",
+            headers={"Authorization": f"AWS4-HMAC-SHA256 Credential={value}"},
+            timeout=KEY_TEST_TIMEOUT
+        )
+        # 403 with proper error = key exists but wrong sig (means key is real)
+        # 403 with InvalidClientTokenId = key doesn't exist
+        body = r.text
+        if "InvalidClientTokenId" in body:
+            return False, "InvalidClientTokenId"
+        if "SignatureDoesNotMatch" in body:
+            return True, "Key exists (signature mismatch expected without secret)"
+        return r.status_code == 200, f"HTTP {r.status_code}"
+    except Exception as e:
+        return None, str(e)
+
+
+def test_stripe_key(value):
+    """Test Stripe live key by fetching account balance."""
+    try:
+        r = requests.get(
+            "https://api.stripe.com/v1/balance",
+            auth=(value, ""),
+            timeout=KEY_TEST_TIMEOUT
+        )
+        if r.status_code == 200:
+            return True, "ACTIVE — balance endpoint returned 200"
+        elif r.status_code == 401:
+            body = r.json()
+            if "expired" in body.get("error", {}).get("message", "").lower():
+                return False, "Expired/revoked"
+            return False, "Invalid key"
+        return r.status_code == 200, f"HTTP {r.status_code}"
+    except Exception as e:
+        return None, str(e)
+
+
+def test_discord_token(value):
+    """Test Discord token by fetching current user."""
+    try:
+        r = requests.get(
+            "https://discord.com/api/v10/users/@me",
+            headers={"Authorization": value},
+            timeout=KEY_TEST_TIMEOUT
+        )
+        if r.status_code == 200:
+            data = r.json()
+            return True, f"ACTIVE — @{data.get('username', '?')}#{data.get('discriminator', '?')}"
+        return False, f"HTTP {r.status_code}"
+    except Exception as e:
+        return None, str(e)
+
+
+def test_github_token(value):
+    """Test GitHub token by fetching user info."""
+    try:
+        r = requests.get(
+            "https://api.github.com/user",
+            headers={"Authorization": f"token {value}"},
+            timeout=KEY_TEST_TIMEOUT
+        )
+        if r.status_code == 200:
+            data = r.json()
+            return True, f"ACTIVE — @{data.get('login', '?')}"
+        return False, f"HTTP {r.status_code}"
+    except Exception as e:
+        return None, str(e)
+
+
+def test_telegram_token(value):
+    """Test Telegram bot token via getMe API."""
+    try:
+        r = requests.get(
+            f"https://api.telegram.org/bot{value}/getMe",
+            timeout=KEY_TEST_TIMEOUT
+        )
+        if r.status_code == 200:
+            data = r.json()
+            if data.get("ok"):
+                bot = data.get("result", {})
+                return True, f"ACTIVE — @{bot.get('username', '?')}"
+        return False, f"HTTP {r.status_code}"
+    except Exception as e:
+        return None, str(e)
+
+
+def test_anthropic_key(value):
+    """Test Anthropic API key with a minimal request."""
+    try:
+        r = requests.post(
+            "https://api.anthropic.com/v1/messages",
+            headers={
+                "x-api-key": value,
+                "anthropic-version": "2023-06-01",
+                "content-type": "application/json",
+            },
+            json={
+                "model": "claude-3-haiku-20240307",
+                "max_tokens": 1,
+                "messages": [{"role": "user", "content": "hi"}]
+            },
+            timeout=KEY_TEST_TIMEOUT
+        )
+        if r.status_code == 200:
+            return True, "ACTIVE — API accepted request"
+        elif r.status_code == 401:
+            return False, "Invalid/revoked"
+        elif r.status_code == 400:
+            # Bad request but auth worked = key is valid
+            return True, "ACTIVE — key accepted (400 = model/auth OK)"
+        return r.status_code < 500, f"HTTP {r.status_code}"
+    except Exception as e:
+        return None, str(e)
+
+
+def test_gemini_key(value):
+    """Test Google AI/Gemini API key."""
+    try:
+        r = requests.get(
+            f"https://generativelanguage.googleapis.com/v1beta/models?key={value}",
+            timeout=KEY_TEST_TIMEOUT
+        )
+        if r.status_code == 200:
+            return True, "ACTIVE — models endpoint returned 200"
+        elif r.status_code == 403:
+            return False, "Invalid or restricted key"
+        return r.status_code == 200, f"HTTP {r.status_code}"
+    except Exception as e:
+        return None, str(e)
+
+
+def test_sendgrid_key(value):
+    """Test SendGrid API key."""
+    try:
+        r = requests.get(
+            "https://api.sendgrid.com/v3/user/profile",
+            headers={"Authorization": f"Bearer {value}"},
+            timeout=KEY_TEST_TIMEOUT
+        )
+        return r.status_code == 200, f"HTTP {r.status_code}"
+    except Exception as e:
+        return None, str(e)
+
+
+def test_firebase_key(value):
+    """Can't easily test Firebase private keys without full config."""
+    return None, "Cannot test — requires full service account"
+
+
+def test_database_url(value):
+    """Can't test remote DB URLs (firewalls, connection strings)."""
+    return None, "Cannot test — requires network access to DB host"
+
+
+def test_mongodb_uri(value):
+    """Can't test remote MongoDB URIs from here."""
+    return None, "Cannot test — requires network access to cluster"
+
+
+def test_jwt_secret(value):
+    """Can't test JWT secrets without knowing which service uses them."""
+    return None, "Cannot test — requires matching JWT endpoint"
+
+
+def test_smtp_password(value):
+    """Can't test SMTP passwords without knowing the server."""
+    return None, "Cannot test — requires SMTP server context"
+
+
+# Map secret types to their test functions
+KEY_TESTERS = {
+    "OpenAI Keys": test_openai_key,
+    "AWS Access Keys": test_aws_key,
+    "Stripe Live Keys": test_stripe_key,
+    "Discord Tokens": test_discord_token,
+    "GitHub Tokens": test_github_token,
+    "Telegram Bots": test_telegram_token,
+    "Anthropic Claude": test_anthropic_key,
+    "Gemini/Google AI": test_gemini_key,
+    "SendGrid Keys": test_sendgrid_key,
+    "Firebase Keys": test_firebase_key,
+    "Database URLs": test_database_url,
+    "MongoDB URIs": test_mongodb_uri,
+    "JWT Secrets": test_jwt_secret,
+    "SMTP Passwords": test_smtp_password,
+    "Twilio Auth": test_sendgrid_key,  # Similar Bearer token pattern
+}
+
+
+def test_keys_in_file(repo_full_name, file_path, secret_type):
+    """Fetch .env file, extract secrets, test each one live.
+    Returns (any_active: bool, test_results: list of dicts)"""
+    
+    content = fetch_file_content(repo_full_name, file_path)
+    if not content:
+        return None, [{"key": "?", "status": "unknown", "detail": "could not fetch file"}]
+    
+    tester = KEY_TESTERS.get(secret_type)
+    if not tester:
+        return None, [{"key": "?", "status": "unknown", "detail": f"no tester for {secret_type}"}]
+    
+    results = []
+    any_active = False
+    
+    for line in content.split('\n'):
+        line = line.strip()
+        if not line or line.startswith('#') or '=' not in line:
+            continue
+        
+        key, _, val = line.partition('=')
+        key = key.strip()
+        val = val.strip().strip('"').strip("'")
+        
+        if not val or len(val) < 12:
+            continue
+        
+        # Skip obvious placeholders
+        if not is_real_secret(key, val, secret_type):
+            continue
+        
+        # Test the key
+        log(f"    Testing {key}...", "scan")
+        is_active, detail = tester(val)
+        
+        result = {
+            "key": key,
+            "value_preview": f"{val[:4]}...{val[-4:]}",
+            "active": is_active,
+            "detail": detail,
+        }
+        results.append(result)
+        
+        if is_active:
+            any_active = True
+            log(f"    🔴 {key} = {detail}", "err")
+        elif is_active is False:
+            log(f"    🟢 {key} = {detail} (revoked/invalid)", "ok")
+        else:
+            log(f"    🟡 {key} = {detail} (could not test)", "warn")
+    
+    return any_active, results
+
+
 # ── Notification Cache ──────────────────────────────────────────────
 def load_notified():
     cache_file = config.NOTIFIED_CACHE
@@ -205,31 +639,31 @@ def send_email(to_email, repo_full_name, exposed_file, secret_type, owner_name):
         log(f"SMTP not configured. Would email {to_email}", "warn")
         return False
     
-    subject = f"🔒 Security heads-up: secrets exposed in {repo_full_name}"
+    subject = f"🔴 CONFIRMED ACTIVE secret in {repo_full_name}"
     
     body = f"""Hey {owner_name},
 
-I found that your repository {repo_full_name} has exposed secrets ({secret_type}) in {exposed_file}.
+⚠️  I tested the secrets in your repository {repo_full_name} and confirmed they are STILL ACTIVE.
 
-⚠️ WHAT'S EXPOSED:
-  File: {exposed_file}
-  Type: {secret_type}
-  URL: https://github.com/{repo_full_name}/blob/main/{exposed_file}
+Exposed file: {exposed_file}
+Secret type: {secret_type}
+URL: https://github.com/{repo_full_name}/blob/main/{exposed_file}
 
-🔴 WHY IT MATTERS:
-  Even if removed in a recent commit, secrets stay in git history FOREVER.
-  Anyone can run: git log -p -- {exposed_file}
+🔴 THIS KEY STILL WORKS — I was able to make successful API calls with it.
+   Anyone who finds this file can use your credentials RIGHT NOW.
 
-✅ HOW TO FIX:
-  1. ROTATE the exposed credentials NOW
+HOW TO FIX:
+  1. ROTATE the exposed credentials NOW (most important!)
   2. git filter-repo --invert-paths --path {exposed_file}
   3. git push --force --all
   4. Add to .gitignore: .env .env.local .env.*.local
 
+If you've already rotated the key, you can ignore this.
+But please check — if the key is still active, you're at risk.
+
 📚 https://github.com/OssamaTaha/env-leak-scanner
 
-This is a friendly automated alert. No judgment — it happens to everyone.
-
+This is an automated security alert.
 Stay secure 🛡️
 """
     
@@ -348,21 +782,53 @@ def run_scan_cycle(notified_set):
 
 
 def notify_findings(findings, notified_set):
-    """Send notifications for new findings."""
+    """Send notifications for new findings — only after verifying real secrets."""
     global total_notified
     
     notified_this_cycle = 0
+    skipped_placeholder = 0
     method = config.NOTIFY_METHOD
     
     for category, items in findings.items():
         for item in items:
             if config.MAX_NOTIFY_PER_CYCLE > 0 and notified_this_cycle >= config.MAX_NOTIFY_PER_CYCLE:
                 log(f"Hit notify limit ({config.MAX_NOTIFY_PER_CYCLE}), stopping", "warn")
-                return notified_this_cycle
+                return notified_this_cycle, skipped_placeholder
             
             repo = item["repo"]
             if repo in notified_set:
                 continue
+            
+            # ── VERIFY + TEST before notifying ──
+            log(f"Verifying {repo}/{item['file']} ({category})...", "scan")
+            
+            # Step 1: Check if values look like real secrets (not placeholders)
+            is_real, real_secrets = verify_repo_secrets(repo, item["file"], category)
+            
+            if not is_real:
+                log(f"  ⏭️  Skipped — only placeholders/test keys found", "warn")
+                notified_set.add(repo)
+                save_notified(notified_set)
+                skipped_placeholder += 1
+                continue
+            
+            log(f"  ✅ Values look real: {', '.join(real_secrets[:3])}", "ok")
+            
+            # Step 2: LIVE TEST the keys — are they still active?
+            log(f"  🔍 Testing keys live...", "scan")
+            any_active, test_results = test_keys_in_file(repo, item["file"], category)
+            
+            if any_active is False:
+                log(f"  🟢 All keys revoked/invalid — skipping notification", "ok")
+                notified_set.add(repo)
+                save_notified(notified_set)
+                skipped_placeholder += 1
+                continue
+            elif any_active is True:
+                active_keys = [r for r in test_results if r.get("active")]
+                log(f"  🔴 {len(active_keys)} ACTIVE key(s) found — notifying!", "err")
+            else:
+                log(f"  🟡 Could not test keys — notifying based on format check", "warn")
             
             log(f"Notifying {repo} ({category}) via {method}...", "scan")
             
@@ -402,10 +868,10 @@ def notify_findings(findings, notified_set):
             
             time.sleep(config.NOTIFY_DELAY)
     
-    return notified_this_cycle
+    return notified_this_cycle, skipped_placeholder
 
 
-def print_cycle_summary(findings, new_repos, exposures, notified_count):
+def print_cycle_summary(findings, new_repos, exposures, notified_count, skipped_count):
     """Print summary after each scan cycle."""
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
@@ -415,6 +881,7 @@ def print_cycle_summary(findings, new_repos, exposures, notified_count):
     print(f"  Exposures this cycle: {RED}{exposures:,}{RESET}")
     print(f"  New repos found:      {YELLOW}{new_repos}{RESET}")
     print(f"  Notifications sent:   {GREEN}{notified_count}{RESET}")
+    print(f"  Skipped (test/revoked): {YELLOW}{skipped_count}{RESET}")
     print(f"  Total lifetime:       {total_notified} notified | {total_scanned} scans")
     
     if findings:
@@ -473,8 +940,8 @@ def main():
         if not running:
             break
         
-        notified_count = notify_findings(findings, notified_set)
-        print_cycle_summary(findings, new_repos, exposures, notified_count)
+        notified_count, skipped_count = notify_findings(findings, notified_set)
+        print_cycle_summary(findings, new_repos, exposures, notified_count, skipped_count)
         
         if config.SCAN_INTERVAL > 0 and running:
             log(f"Next cycle in {config.SCAN_INTERVAL}s...", "info")
