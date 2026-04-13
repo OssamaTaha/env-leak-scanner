@@ -1,0 +1,838 @@
+{
+  "timestamp": "2026-04-13T13:41:42.772933",
+  "total_exposures": 47620,
+  "unique_repos": 98,
+  "categories": {
+    "OpenAI Keys": 3,
+    "AWS Access Keys": 4,
+    "Stripe Live Keys": 3,
+    "Database URLs": 10,
+    "MongoDB URIs": 6,
+    "Discord Tokens": 7,
+    "GitHub Tokens": 7,
+    "Firebase Keys": 7,
+    "Twilio Auth": 7,
+    "SendGrid Keys": 6,
+    "Telegram Bots": 10,
+    "JWT Secrets": 8,
+    "SMTP Passwords": 8,
+    "Gemini/Google AI": 7,
+    "Anthropic Claude": 5
+  },
+  "findings": {
+    "OpenAI Keys": [
+      {
+        "repo": "KennyDizi/OHA",
+        "file": ".env.openai-o3",
+        "url": "https://github.com/KennyDizi/OHA/blob/d2767455b524f0c9aba9ceb3d795ef92bcbc794c/.env.openai-o3",
+        "stars": 0,
+        "language": "",
+        "category": "OpenAI Keys"
+      },
+      {
+        "repo": "yakyak85/learning-dashboard",
+        "file": ".env.local.rtf",
+        "url": "https://github.com/yakyak85/learning-dashboard/blob/166289a32517a0d52ff9b7e59ac9678a766ccd5e/.env.local.rtf",
+        "stars": 0,
+        "language": "",
+        "category": "OpenAI Keys"
+      },
+      {
+        "repo": "centrograduadosFIUBA/geniabot",
+        "file": ".env_ejm",
+        "url": "https://github.com/centrograduadosFIUBA/geniabot/blob/f0fd1d0b0e88d4c50b447c0ea5137c66eb77d0c4/.env_ejm",
+        "stars": 0,
+        "language": "",
+        "category": "OpenAI Keys"
+      }
+    ],
+    "AWS Access Keys": [
+      {
+        "repo": "mansarkasim-cpu/sigap-planner",
+        "file": "backend/.env.sh",
+        "url": "https://github.com/mansarkasim-cpu/sigap-planner/blob/3e31d7fd65979c730170a46e41012fa308fc61fb/backend/.env.sh",
+        "stars": 0,
+        "language": "",
+        "category": "AWS Access Keys"
+      },
+      {
+        "repo": "JHammerZ/jhammerz.github.io",
+        "file": ".env.secret",
+        "url": "https://github.com/JHammerZ/jhammerz.github.io/blob/224492337217326740dd3a8d4c5b25f87156bdce/.env.secret",
+        "stars": 0,
+        "language": "",
+        "category": "AWS Access Keys"
+      },
+      {
+        "repo": "hummingbird-me/kitsu-server",
+        "file": ".env",
+        "url": "https://github.com/hummingbird-me/kitsu-server/blob/41dd55c05ac8dcbf5bb85dd83fd44aae01702243/.env",
+        "stars": 0,
+        "language": "",
+        "category": "AWS Access Keys"
+      },
+      {
+        "repo": "AndreyMaykov/Weather_factors_in_crime--Redshift-Airflow-Terraform",
+        "file": "src/scripts/.env.txt",
+        "url": "https://github.com/AndreyMaykov/Weather_factors_in_crime--Redshift-Airflow-Terraform/blob/1e89b60a742ac26e6cd4768dfd9da7db02e254ec/src/scripts/.env.txt",
+        "stars": 0,
+        "language": "",
+        "category": "AWS Access Keys"
+      }
+    ],
+    "Stripe Live Keys": [
+      {
+        "repo": "BouklifYacine/FootHubGo",
+        "file": "README.ENV.md",
+        "url": "https://github.com/BouklifYacine/FootHubGo/blob/d8ea37f1e9573bc774d86a878063a49cbc9e76bf/README.ENV.md",
+        "stars": 0,
+        "language": "",
+        "category": "Stripe Live Keys"
+      },
+      {
+        "repo": "EfeDurmaz16/sardis",
+        "file": ".env.mainnet",
+        "url": "https://github.com/EfeDurmaz16/sardis/blob/3e3c2437bbece220a30c94493be32ef6bbfa9df3/.env.mainnet",
+        "stars": 0,
+        "language": "",
+        "category": "Stripe Live Keys"
+      },
+      {
+        "repo": "saitarunallu/CredNXT",
+        "file": ".env.render",
+        "url": "https://github.com/saitarunallu/CredNXT/blob/e658b967c6f275a0680c0401930b10980cf0e7df/.env.render",
+        "stars": 0,
+        "language": "",
+        "category": "Stripe Live Keys"
+      }
+    ],
+    "Database URLs": [
+      {
+        "repo": "rom-rb/rom-sql",
+        "file": ".env.jdbc",
+        "url": "https://github.com/rom-rb/rom-sql/blob/b38bf3b3a5ef525b4613111621031adb24a89f8d/.env.jdbc",
+        "stars": 0,
+        "language": "",
+        "category": "Database URLs"
+      },
+      {
+        "repo": "LeChatErrant/API-template",
+        "file": ".envrc",
+        "url": "https://github.com/LeChatErrant/API-template/blob/a443af8f300a100da25a7ae15d40979c0546e085/.envrc",
+        "stars": 0,
+        "language": "",
+        "category": "Database URLs"
+      },
+      {
+        "repo": "varianter/testcontainers-nextjs-template",
+        "file": ".env.e2e",
+        "url": "https://github.com/varianter/testcontainers-nextjs-template/blob/3ce67de6d1116cc0f87ce87024ec6ab5b2d9c13a/.env.e2e",
+        "stars": 0,
+        "language": "",
+        "category": "Database URLs"
+      },
+      {
+        "repo": "Schroedinger-Hat/osday",
+        "file": ".env-e",
+        "url": "https://github.com/Schroedinger-Hat/osday/blob/115900abe9748a6d948490e80e4b997ed89d9471/.env-e",
+        "stars": 0,
+        "language": "",
+        "category": "Database URLs"
+      },
+      {
+        "repo": "KungRaseri/uncharted-lands",
+        "file": "server/.env.md",
+        "url": "https://github.com/KungRaseri/uncharted-lands/blob/a7352af899a1da13b22c6b32717c93d2dd713d5e/server/.env.md",
+        "stars": 0,
+        "language": "",
+        "category": "Database URLs"
+      },
+      {
+        "repo": "GenomicDataInfrastructure/gdi-userportal-deployment",
+        "file": ".env.ckan",
+        "url": "https://github.com/GenomicDataInfrastructure/gdi-userportal-deployment/blob/41b3df1dbc77e5ddeb8ede5b1a39dc7a40d3eb6c/.env.ckan",
+        "stars": 0,
+        "language": "",
+        "category": "Database URLs"
+      },
+      {
+        "repo": "mend3/workspace",
+        "file": ".env.sh",
+        "url": "https://github.com/mend3/workspace/blob/925bb6d64c99c0ab5be066c17ae77959c230f972/.env.sh",
+        "stars": 0,
+        "language": "",
+        "category": "Database URLs"
+      },
+      {
+        "repo": "guider23/tudb",
+        "file": ".env.rds",
+        "url": "https://github.com/guider23/tudb/blob/45e697be98b080d3d9b1c715196a931509214d6e/.env.rds",
+        "stars": 0,
+        "language": "",
+        "category": "Database URLs"
+      },
+      {
+        "repo": "zhitancloud/zhitan-ems",
+        "file": ".env.file",
+        "url": "https://github.com/zhitancloud/zhitan-ems/blob/6220dbc667c908cce1b2f617cf4e7138d24f3769/.env.file",
+        "stars": 0,
+        "language": "",
+        "category": "Database URLs"
+      },
+      {
+        "repo": "fhircat/FHIROntopOMOP",
+        "file": ".env.demo",
+        "url": "https://github.com/fhircat/FHIROntopOMOP/blob/fdc49c9de2938535b39b12430806040cc4157cef/.env.demo",
+        "stars": 0,
+        "language": "",
+        "category": "Database URLs"
+      }
+    ],
+    "MongoDB URIs": [
+      {
+        "repo": "2hjaito/vetonary",
+        "file": ".env.public",
+        "url": "https://github.com/2hjaito/vetonary/blob/7c575683a1220b2ae6ae416f3270f3a91a26e7a4/.env.public",
+        "stars": 0,
+        "language": "",
+        "category": "MongoDB URIs"
+      },
+      {
+        "repo": "Nurio34/whatsup-server",
+        "file": ".env.txt",
+        "url": "https://github.com/Nurio34/whatsup-server/blob/c59756993240d028555e6abb6399f81825b0db5f/.env.txt",
+        "stars": 0,
+        "language": "",
+        "category": "MongoDB URIs"
+      },
+      {
+        "repo": "kislevlevy/natours",
+        "file": "config.env.md",
+        "url": "https://github.com/kislevlevy/natours/blob/629960d570c58fdd322d031c81245fbf10c0f553/config.env.md",
+        "stars": 0,
+        "language": "",
+        "category": "MongoDB URIs"
+      },
+      {
+        "repo": "carryhome/carryhome_node_api",
+        "file": ".env.qa",
+        "url": "https://github.com/carryhome/carryhome_node_api/blob/2e7ab1f732b7bbbd139856a4ffcc24154313c856/.env.qa",
+        "stars": 0,
+        "language": "",
+        "category": "MongoDB URIs"
+      },
+      {
+        "repo": "cleefroakes/API",
+        "file": "ini.env.txt",
+        "url": "https://github.com/cleefroakes/API/blob/6c39d8f0c16605131bd25b3b7e63dd109925624a/ini.env.txt",
+        "stars": 0,
+        "language": "",
+        "category": "MongoDB URIs"
+      },
+      {
+        "repo": "iSparshP/moocflix",
+        "file": ".env.docker",
+        "url": "https://github.com/iSparshP/moocflix/blob/ba228fc1e7cdb2b8249ae4eefed47d62bc50e1e5/.env.docker",
+        "stars": 0,
+        "language": "",
+        "category": "MongoDB URIs"
+      }
+    ],
+    "Discord Tokens": [
+      {
+        "repo": "justas-d/roll20-enhancement-suite",
+        "file": ".env.layout",
+        "url": "https://github.com/justas-d/roll20-enhancement-suite/blob/06bcec90f29aab35bcaf7175cdf7174659f1f4b2/.env.layout",
+        "stars": 0,
+        "language": "",
+        "category": "Discord Tokens"
+      },
+      {
+        "repo": "dxos/dxos",
+        "file": ".env.1password",
+        "url": "https://github.com/dxos/dxos/blob/d5c17e143629dc96e3610a8a0ff9b8ba8c4d96bc/.env.1password",
+        "stars": 0,
+        "language": "",
+        "category": "Discord Tokens"
+      },
+      {
+        "repo": "kalebbroo/PlexBot",
+        "file": "RenameMe.env.txt",
+        "url": "https://github.com/kalebbroo/PlexBot/blob/6eb52bcba1654e99f30f880da7a338edc0a301a2/RenameMe.env.txt",
+        "stars": 0,
+        "language": "",
+        "category": "Discord Tokens"
+      },
+      {
+        "repo": "warmans/rsk-search",
+        "file": ".envrc",
+        "url": "https://github.com/warmans/rsk-search/blob/94f13f7e50b30f5e7cf1dc36d423e138b97205a5/.envrc",
+        "stars": 0,
+        "language": "",
+        "category": "Discord Tokens"
+      },
+      {
+        "repo": "Temmon/Bibliomantic_Oracles",
+        "file": ".env-shell",
+        "url": "https://github.com/Temmon/Bibliomantic_Oracles/blob/b75566f38fffee5937cc2cb00cb309b74d01be98/.env-shell",
+        "stars": 0,
+        "language": "",
+        "category": "Discord Tokens"
+      },
+      {
+        "repo": "Bot-Devel/Quote-Finder",
+        "file": ".env.ex",
+        "url": "https://github.com/Bot-Devel/Quote-Finder/blob/188087829b3d6564901f78d10873228036257c62/.env.ex",
+        "stars": 0,
+        "language": "",
+        "category": "Discord Tokens"
+      },
+      {
+        "repo": "vtnorton/vtnorton.com",
+        "file": ".envlocal",
+        "url": "https://github.com/vtnorton/vtnorton.com/blob/88bcb35f7451a8c9364fa6757cfa72f0345550a6/.envlocal",
+        "stars": 0,
+        "language": "",
+        "category": "Discord Tokens"
+      }
+    ],
+    "GitHub Tokens": [
+      {
+        "repo": "virtual-kubelet/virtual-kubelet",
+        "file": ".envrc",
+        "url": "https://github.com/virtual-kubelet/virtual-kubelet/blob/1648893f7ac658e76276069a0545a99fa2a030a9/.envrc",
+        "stars": 0,
+        "language": "",
+        "category": "GitHub Tokens"
+      },
+      {
+        "repo": "runmedev/runme",
+        "file": ".env.spec",
+        "url": "https://github.com/runmedev/runme/blob/7c15e41b8fecdf9098bf01fdb7fca003e33de607/.env.spec",
+        "stars": 0,
+        "language": "",
+        "category": "GitHub Tokens"
+      },
+      {
+        "repo": "iAmCorey/devtoolset",
+        "file": ".env.local.md",
+        "url": "https://github.com/iAmCorey/devtoolset/blob/8ba79d226e8e3d907aa3ef8d97f29e08769defd7/.env.local.md",
+        "stars": 0,
+        "language": "",
+        "category": "GitHub Tokens"
+      },
+      {
+        "repo": "Azure-Samples/azure-openai-entity-extraction",
+        "file": "http/.env.github",
+        "url": "https://github.com/Azure-Samples/azure-openai-entity-extraction/blob/a414985608747898fab9b1af3707927a96b899e9/http/.env.github",
+        "stars": 0,
+        "language": "",
+        "category": "GitHub Tokens"
+      },
+      {
+        "repo": "babel-utils/babel-plugin-tester",
+        "file": ".env.default",
+        "url": "https://github.com/babel-utils/babel-plugin-tester/blob/e151cd9791fe3e8405f10625ee785b624d84d00e/.env.default",
+        "stars": 0,
+        "language": "",
+        "category": "GitHub Tokens"
+      },
+      {
+        "repo": "chef/automate",
+        "file": ".envrc",
+        "url": "https://github.com/chef/automate/blob/61ca031112bf605c9c2a8975957b505635374e49/.envrc",
+        "stars": 0,
+        "language": "",
+        "category": "GitHub Tokens"
+      },
+      {
+        "repo": "dimaslanjaka/php-proxy-hunter",
+        "file": ".env.mjs",
+        "url": "https://github.com/dimaslanjaka/php-proxy-hunter/blob/8e2301634cba5cbe1c15a045a5e8f3a1b02f44d8/.env.mjs",
+        "stars": 0,
+        "language": "",
+        "category": "GitHub Tokens"
+      }
+    ],
+    "Firebase Keys": [
+      {
+        "repo": "etereo-io/edge-next",
+        "file": ".env.build",
+        "url": "https://github.com/etereo-io/edge-next/blob/6739d86a845106f3f0ba0c688e5a2cf5d553de51/.env.build",
+        "stars": 0,
+        "language": "",
+        "category": "Firebase Keys"
+      },
+      {
+        "repo": "Ashif4354/CyclicTasks",
+        "file": "Backend/.env.txt",
+        "url": "https://github.com/Ashif4354/CyclicTasks/blob/09e63bb9ee5138e25d343266a2262e82d684277d/Backend/.env.txt",
+        "stars": 0,
+        "language": "",
+        "category": "Firebase Keys"
+      },
+      {
+        "repo": "calmato/gran-book",
+        "file": ".env.temp",
+        "url": "https://github.com/calmato/gran-book/blob/7efc56fc6f9783fdf607da804fda8f094f60fcd1/.env.temp",
+        "stars": 0,
+        "language": "",
+        "category": "Firebase Keys"
+      },
+      {
+        "repo": "genialityco/photo-booth",
+        "file": "README.env.md",
+        "url": "https://github.com/genialityco/photo-booth/blob/63c59565f7f2ddafbf5e6b2dc907a516bcc0e1f0/README.env.md",
+        "stars": 0,
+        "language": "",
+        "category": "Firebase Keys"
+      },
+      {
+        "repo": "Karasu-Lab/karasu-lab-api",
+        "file": "src/config/auth.env.ts",
+        "url": "https://github.com/Karasu-Lab/karasu-lab-api/blob/66a697ffec2df0c457789846d02244879dbb605e/src/config/auth.env.ts",
+        "stars": 0,
+        "language": "",
+        "category": "Firebase Keys"
+      },
+      {
+        "repo": "inkFusionLabs/LettersBeyond-Website",
+        "file": ".env.vercel",
+        "url": "https://github.com/inkFusionLabs/LettersBeyond-Website/blob/55608ef9522e7eb09968f70b3afbb8cdab85f1b1/.env.vercel",
+        "stars": 0,
+        "language": "",
+        "category": "Firebase Keys"
+      },
+      {
+        "repo": "blankenshipd001/track-my-stuff",
+        "file": ".env",
+        "url": "https://github.com/blankenshipd001/track-my-stuff/blob/3b0ce9bfc248f572ca2682efc2ad6179dc5a078a/.env",
+        "stars": 0,
+        "language": "",
+        "category": "Firebase Keys"
+      }
+    ],
+    "Twilio Auth": [
+      {
+        "repo": "EtherealEngine/Digital-Beings",
+        "file": ".env.default",
+        "url": "https://github.com/EtherealEngine/Digital-Beings/blob/233e1b9becd214e12c8a9c81624fe23cbff4dbf4/.env.default",
+        "stars": 0,
+        "language": "",
+        "category": "Twilio Auth"
+      },
+      {
+        "repo": "revily/revily",
+        "file": ".env.generated",
+        "url": "https://github.com/revily/revily/blob/219323f13dbaaec9e16c51f320bc9f8ec0c22693/.env.generated",
+        "stars": 0,
+        "language": "",
+        "category": "Twilio Auth"
+      },
+      {
+        "repo": "forwardemail/forwardemail.net",
+        "file": ".env.schema",
+        "url": "https://github.com/forwardemail/forwardemail.net/blob/ae92b58c449c6848a49361cf30e82dcdff1ad0b7/.env.schema",
+        "stars": 0,
+        "language": "",
+        "category": "Twilio Auth"
+      },
+      {
+        "repo": "Revanth2002/Pangea-Server",
+        "file": ".env .txt",
+        "url": "https://github.com/Revanth2002/Pangea-Server/blob/8ab572f7bb80db81db1d6a8f0dabc9e156004f3d/.env%20.txt",
+        "stars": 0,
+        "language": "",
+        "category": "Twilio Auth"
+      },
+      {
+        "repo": "mofc-endhunger/freshtrak-registration-api",
+        "file": ".env.beta",
+        "url": "https://github.com/mofc-endhunger/freshtrak-registration-api/blob/6ec8d5ff53920a34713d2e5add8c70defdc71373/.env.beta",
+        "stars": 0,
+        "language": "",
+        "category": "Twilio Auth"
+      },
+      {
+        "repo": "danielthedifficult/alert-system",
+        "file": "jest.env.js",
+        "url": "https://github.com/danielthedifficult/alert-system/blob/cb1d8c6d15211511135c7ccf1ee2ed663e940f69/jest.env.js",
+        "stars": 0,
+        "language": "",
+        "category": "Twilio Auth"
+      },
+      {
+        "repo": "root-kawaii/PR",
+        "file": "rust_BE/README.env.md",
+        "url": "https://github.com/root-kawaii/PR/blob/4a271aa1c393ff3e6cba961542f3a0d528c31eca/rust_BE/README.env.md",
+        "stars": 0,
+        "language": "",
+        "category": "Twilio Auth"
+      }
+    ],
+    "SendGrid Keys": [
+      {
+        "repo": "webwhiz-ai/webwhiz",
+        "file": ".env.docker",
+        "url": "https://github.com/webwhiz-ai/webwhiz/blob/8262769f5e5d532c1f793d270c62a59365f18b63/.env.docker",
+        "stars": 0,
+        "language": "",
+        "category": "SendGrid Keys"
+      },
+      {
+        "repo": "openwhyd/openwhyd",
+        "file": ".env-docker",
+        "url": "https://github.com/openwhyd/openwhyd/blob/d1d58606f2c52f1119a3ff8e73e7eb06c62f097e/.env-docker",
+        "stars": 0,
+        "language": "",
+        "category": "SendGrid Keys"
+      },
+      {
+        "repo": "trendscenter/coinstac",
+        "file": "config/.env-ci.sh",
+        "url": "https://github.com/trendscenter/coinstac/blob/6448c364ca91fe4dd59180bbfebf66f09c47856c/config/.env-ci.sh",
+        "stars": 0,
+        "language": "",
+        "category": "SendGrid Keys"
+      },
+      {
+        "repo": "PyBites-Open-Source/pybitesbooks",
+        "file": ".env-compose",
+        "url": "https://github.com/PyBites-Open-Source/pybitesbooks/blob/30ce42c78b4a4e5f6d209795baef97bd25c56800/.env-compose",
+        "stars": 0,
+        "language": "",
+        "category": "SendGrid Keys"
+      },
+      {
+        "repo": "gsamokovarov/balkan",
+        "file": ".env.erb",
+        "url": "https://github.com/gsamokovarov/balkan/blob/b373634a4662c325d17a0c89d8d731120e9efd77/.env.erb",
+        "stars": 0,
+        "language": "",
+        "category": "SendGrid Keys"
+      },
+      {
+        "repo": "hcgalvantech/ctrltmpxs",
+        "file": ".env.txt",
+        "url": "https://github.com/hcgalvantech/ctrltmpxs/blob/0a64d22276160bbbd6a4ea8004dada7f5a3f1fe7/.env.txt",
+        "stars": 0,
+        "language": "",
+        "category": "SendGrid Keys"
+      }
+    ],
+    "Telegram Bots": [
+      {
+        "repo": "LlmKira/Openaibot",
+        "file": ".env.exp",
+        "url": "https://github.com/LlmKira/Openaibot/blob/68b095393790daee3e935339ced6bb03b0c3db2f/.env.exp",
+        "stars": 0,
+        "language": "",
+        "category": "Telegram Bots"
+      },
+      {
+        "repo": "aasisvinayak/flymyshop",
+        "file": "core/.env.travis",
+        "url": "https://github.com/aasisvinayak/flymyshop/blob/defcabf780ce537f949f08510682deb25703178c/core/.env.travis",
+        "stars": 0,
+        "language": "",
+        "category": "Telegram Bots"
+      },
+      {
+        "repo": "mehdisadeghi/clashogram",
+        "file": ".envrc",
+        "url": "https://github.com/mehdisadeghi/clashogram/blob/e1d9603be1ee85714b99afe3827417d74faf5149/.envrc",
+        "stars": 0,
+        "language": "",
+        "category": "Telegram Bots"
+      },
+      {
+        "repo": "aviaryan/voice-transcribe-summarize-telegram-bot",
+        "file": ".env.copy",
+        "url": "https://github.com/aviaryan/voice-transcribe-summarize-telegram-bot/blob/27e47aad6cba61482e10b40a9f5c23be23bf86bc/.env.copy",
+        "stars": 0,
+        "language": "",
+        "category": "Telegram Bots"
+      },
+      {
+        "repo": "3AHAT0P/StrangeTextRPG",
+        "file": ".env.d.ts",
+        "url": "https://github.com/3AHAT0P/StrangeTextRPG/blob/1c00b62384910ae4ffb60b34c7b0e8e2d8a31e70/.env.d.ts",
+        "stars": 0,
+        "language": "",
+        "category": "Telegram Bots"
+      },
+      {
+        "repo": "sajjadmrx/telegram-to-discord-gif",
+        "file": ".env.ex",
+        "url": "https://github.com/sajjadmrx/telegram-to-discord-gif/blob/7961c263bb3e516a58a05a80308c9890f7feba6a/.env.ex",
+        "stars": 0,
+        "language": "",
+        "category": "Telegram Bots"
+      },
+      {
+        "repo": "0PeterAdel/Money-Management",
+        "file": ".env.docker",
+        "url": "https://github.com/0PeterAdel/Money-Management/blob/90b5cb6fe9ea8f654368afea56a56133dba2c090/.env.docker",
+        "stars": 0,
+        "language": "",
+        "category": "Telegram Bots"
+      },
+      {
+        "repo": "bartosian/walrus-tools",
+        "file": ".env.tmp",
+        "url": "https://github.com/bartosian/walrus-tools/blob/841283ca6539e9eb8c7eb200866c02d6946603e9/.env.tmp",
+        "stars": 0,
+        "language": "",
+        "category": "Telegram Bots"
+      },
+      {
+        "repo": "webshining/aiogram-mongo-template",
+        "file": ".env.ren",
+        "url": "https://github.com/webshining/aiogram-mongo-template/blob/54c43163675dd70c537d0eb53c9b22fc74ac85d7/.env.ren",
+        "stars": 0,
+        "language": "",
+        "category": "Telegram Bots"
+      },
+      {
+        "repo": "420atanytime/reshad-openai",
+        "file": ".env.txt",
+        "url": "https://github.com/420atanytime/reshad-openai/blob/0ffbbd97919bd7b4c398fd1e49d8e8fa60627b43/.env.txt",
+        "stars": 0,
+        "language": "",
+        "category": "Telegram Bots"
+      }
+    ],
+    "JWT Secrets": [
+      {
+        "repo": "qunabu/strapi-unit-test-example",
+        "file": ".env.eee",
+        "url": "https://github.com/qunabu/strapi-unit-test-example/blob/a7143c3c16619e497bdbfc23d2971289e2a18bbc/.env.eee",
+        "stars": 0,
+        "language": "",
+        "category": "JWT Secrets"
+      },
+      {
+        "repo": "choras-org/CHORAS",
+        "file": ".env.api",
+        "url": "https://github.com/choras-org/CHORAS/blob/0dcab8a6aded7568630782909737c06866d2a0a9/.env.api",
+        "stars": 0,
+        "language": "",
+        "category": "JWT Secrets"
+      },
+      {
+        "repo": "Enterprise-CMCS/managed-care-review",
+        "file": ".envrc",
+        "url": "https://github.com/Enterprise-CMCS/managed-care-review/blob/217b325d7d27291ff08c6a9b8511c933e8015c6e/.envrc",
+        "stars": 0,
+        "language": "",
+        "category": "JWT Secrets"
+      },
+      {
+        "repo": "Bitbox-Connect/Bitbox",
+        "file": ".env.txt",
+        "url": "https://github.com/Bitbox-Connect/Bitbox/blob/f7c6a6292a89b8d282940582541c88158178d5c1/.env.txt",
+        "stars": 0,
+        "language": "",
+        "category": "JWT Secrets"
+      },
+      {
+        "repo": "vectornguyen76/flask-rest-api-template",
+        "file": ".env.pro",
+        "url": "https://github.com/vectornguyen76/flask-rest-api-template/blob/f5879b883dbceb3f248ce0c70105d2b091e4d4c2/.env.pro",
+        "stars": 0,
+        "language": "",
+        "category": "JWT Secrets"
+      },
+      {
+        "repo": "TranHuuDat2004/mymusic",
+        "file": ".env2",
+        "url": "https://github.com/TranHuuDat2004/mymusic/blob/b11341502e37da7e825b766788d05b27c1921bb2/.env2",
+        "stars": 0,
+        "language": "",
+        "category": "JWT Secrets"
+      },
+      {
+        "repo": "muhammadwasi81/mern-ecommerce",
+        "file": ".env.md",
+        "url": "https://github.com/muhammadwasi81/mern-ecommerce/blob/f2a7af3082e80adc1bf2318fbbe5909a8cc09555/.env.md",
+        "stars": 0,
+        "language": "",
+        "category": "JWT Secrets"
+      },
+      {
+        "repo": "BlacksInTechnologyOrg/bit-job-board",
+        "file": ".env_bak",
+        "url": "https://github.com/BlacksInTechnologyOrg/bit-job-board/blob/6f8bc45496e2c7e97eb8f89af2bff248a83e97c0/.env_bak",
+        "stars": 0,
+        "language": "",
+        "category": "JWT Secrets"
+      }
+    ],
+    "SMTP Passwords": [
+      {
+        "repo": "randy-girard/app_perf",
+        "file": ".env.docker",
+        "url": "https://github.com/randy-girard/app_perf/blob/0a918ecedf1677b288922e232ca372bc55dd4e5a/.env.docker",
+        "stars": 0,
+        "language": "",
+        "category": "SMTP Passwords"
+      },
+      {
+        "repo": "guilhermecgs/ir",
+        "file": ".envs",
+        "url": "https://github.com/guilhermecgs/ir/blob/8effcdd8afcd163d922c8b50b50cbaae42815024/.envs",
+        "stars": 0,
+        "language": "",
+        "category": "SMTP Passwords"
+      },
+      {
+        "repo": "Hermsi1337/docker-compose",
+        "file": "gitlab/.env_",
+        "url": "https://github.com/Hermsi1337/docker-compose/blob/8abbee551369bcc019a5c34455024f3faf58a07c/gitlab/.env_",
+        "stars": 0,
+        "language": "",
+        "category": "SMTP Passwords"
+      },
+      {
+        "repo": "bitzlato/devdax",
+        "file": ".envrc",
+        "url": "https://github.com/bitzlato/devdax/blob/63e88df0136bd9a2fe6104d401377379b40655d3/.envrc",
+        "stars": 0,
+        "language": "",
+        "category": "SMTP Passwords"
+      },
+      {
+        "repo": "UCLOrengoGroup/ted-web",
+        "file": ".env.cs",
+        "url": "https://github.com/UCLOrengoGroup/ted-web/blob/0f47b83dbd9d202d9014e96b96946328f559618e/.env.cs",
+        "stars": 0,
+        "language": "",
+        "category": "SMTP Passwords"
+      },
+      {
+        "repo": "magicstone-dev/ecko",
+        "file": ".env.nanobox",
+        "url": "https://github.com/magicstone-dev/ecko/blob/a11982ed5341fb447ac3f65543488a014aa319d5/.env.nanobox",
+        "stars": 0,
+        "language": "",
+        "category": "SMTP Passwords"
+      },
+      {
+        "repo": "techx/xfair-resume",
+        "file": ".env.base",
+        "url": "https://github.com/techx/xfair-resume/blob/04c00781dd4c8f1c7b513d97015a75c06abf77c4/.env.base",
+        "stars": 0,
+        "language": "",
+        "category": "SMTP Passwords"
+      },
+      {
+        "repo": "abhays02/feastwala",
+        "file": ".env.txt",
+        "url": "https://github.com/abhays02/feastwala/blob/88d0723df0dd6a0d99c0593a557baf55c4e3b698/.env.txt",
+        "stars": 0,
+        "language": "",
+        "category": "SMTP Passwords"
+      }
+    ],
+    "Gemini/Google AI": [
+      {
+        "repo": "muchdogesec/txt2stix",
+        "file": ".env.markdown",
+        "url": "https://github.com/muchdogesec/txt2stix/blob/4dc6be7c186161bc3ced729e208302c5c13c9b66/.env.markdown",
+        "stars": 0,
+        "language": "",
+        "category": "Gemini/Google AI"
+      },
+      {
+        "repo": "CartoDB/tiles3d-demo",
+        "file": ".env.preview",
+        "url": "https://github.com/CartoDB/tiles3d-demo/blob/30e2f479a0ff9bd3269d905d15ccaa6a56f65875/.env.preview",
+        "stars": 0,
+        "language": "",
+        "category": "Gemini/Google AI"
+      },
+      {
+        "repo": "ruankie/ecrivai",
+        "file": ".env.examle",
+        "url": "https://github.com/ruankie/ecrivai/blob/726ba7509126806a5ec59177ceca321103ff16ee/.env.examle",
+        "stars": 0,
+        "language": "",
+        "category": "Gemini/Google AI"
+      },
+      {
+        "repo": "arjy0/TrusTerms",
+        "file": "backend/.env.txt",
+        "url": "https://github.com/arjy0/TrusTerms/blob/3ab47e891afab1f0ed24ba7f711f7cd6115b8254/backend/.env.txt",
+        "stars": 0,
+        "language": "",
+        "category": "Gemini/Google AI"
+      },
+      {
+        "repo": "abhaymathur21/TensionCode",
+        "file": ".env",
+        "url": "https://github.com/abhaymathur21/TensionCode/blob/70608c101660236753502c8926255c4207aa0b6a/.env",
+        "stars": 0,
+        "language": "",
+        "category": "Gemini/Google AI"
+      },
+      {
+        "repo": "galter27/GymBuddyWebBackend",
+        "file": ".env.tst",
+        "url": "https://github.com/galter27/GymBuddyWebBackend/blob/1937c531d29b4e52c5a6b0ed9706cea95a28c095/.env.tst",
+        "stars": 0,
+        "language": "",
+        "category": "Gemini/Google AI"
+      },
+      {
+        "repo": "multicam/ikigai-rev",
+        "file": ".envrc",
+        "url": "https://github.com/multicam/ikigai-rev/blob/83b410e3834077156b0e7058fd4f4a63538559d0/.envrc",
+        "stars": 0,
+        "language": "",
+        "category": "Gemini/Google AI"
+      }
+    ],
+    "Anthropic Claude": [
+      {
+        "repo": "liblaber/ai",
+        "file": ".env.docker",
+        "url": "https://github.com/liblaber/ai/blob/bf3d1d6f0279850d4d2b566f96354c31dd755a1f/.env.docker",
+        "stars": 0,
+        "language": "",
+        "category": "Anthropic Claude"
+      },
+      {
+        "repo": "Spectral-Finance/lux",
+        "file": "dev.envrc",
+        "url": "https://github.com/Spectral-Finance/lux/blob/55e2049d3a5ef87e5186ffce657ba38a760fede1/dev.envrc",
+        "stars": 0,
+        "language": "",
+        "category": "Anthropic Claude"
+      },
+      {
+        "repo": "deeppavlov/chatsky",
+        "file": ".env_file",
+        "url": "https://github.com/deeppavlov/chatsky/blob/cdfae50d96a2662dcf601c64455ac6c5db52c4df/.env_file",
+        "stars": 0,
+        "language": "",
+        "category": "Anthropic Claude"
+      },
+      {
+        "repo": "muchdogesec/txt2detection",
+        "file": ".env.markdown",
+        "url": "https://github.com/muchdogesec/txt2detection/blob/30d69bd4fded825cf5126cf5b64326ba83063a86/.env.markdown",
+        "stars": 0,
+        "language": "",
+        "category": "Anthropic Claude"
+      },
+      {
+        "repo": "samuelho-dev/dev-config",
+        "file": ".envrc",
+        "url": "https://github.com/samuelho-dev/dev-config/blob/d8bfe155593aaa81862ea71f2a0138a36bde3703/.envrc",
+        "stars": 0,
+        "language": "",
+        "category": "Anthropic Claude"
+      }
+    ]
+  }
+}
